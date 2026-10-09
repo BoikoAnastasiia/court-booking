@@ -2,7 +2,6 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonthOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
 import Popover from '@mui/material/Popover';
@@ -12,6 +11,21 @@ import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDate } from '../../format';
+
+// Shared look of the day tiles and the calendar button.
+const tileSx = {
+  flexDirection: 'column',
+  flexShrink: 0,
+  minWidth: 64,
+  py: 1,
+  borderRadius: 2,
+  border: 1,
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+} as const;
+
+// On phones the strip is swiped, so the arrows only take up space.
+const arrowSx = { display: { xs: 'none', sm: 'inline-flex' } } as const;
 
 interface DateStripProps {
   /** Bookable dates (YYYY-MM-DD), first = today. */
@@ -56,22 +70,26 @@ export function DateStrip({ dates, value, onChange }: DateStripProps) {
 
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      <Button
-        variant="outlined"
-        color="inherit"
-        startIcon={<CalendarMonthIcon />}
+      <ButtonBase
         onClick={(e) => setCalendarAnchor(e.currentTarget)}
         aria-label="Open calendar"
-        sx={{ flexShrink: 0, alignSelf: 'stretch', borderColor: 'divider', flexDirection: 'column', gap: 0.5, minWidth: 88 }}
+        sx={{ ...tileSx, alignSelf: 'stretch', gap: 0.5, '&:hover': { borderColor: 'text.primary' } }}
       >
+        <CalendarMonthIcon fontSize="small" />
         <Typography variant="caption" lineHeight={1.2} textAlign="center">
           {formatDate(value, { month: 'short' })}
           <br />
           {formatDate(value, { year: 'numeric' })}
         </Typography>
-      </Button>
+      </ButtonBase>
 
-      <IconButton aria-label="Earlier dates" onClick={() => page(-1)} disabled={!canScroll.left} size="small">
+      <IconButton
+        aria-label="Earlier dates"
+        onClick={() => page(-1)}
+        disabled={!canScroll.left}
+        size="small"
+        sx={arrowSx}
+      >
         <ChevronLeftIcon />
       </IconButton>
 
@@ -98,12 +116,7 @@ export function DateStrip({ dates, value, onChange }: DateStripProps) {
               aria-pressed={selected}
               aria-label={formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
               sx={{
-                flexDirection: 'column',
-                flexShrink: 0,
-                minWidth: 64,
-                py: 1,
-                borderRadius: 2,
-                border: 1,
+                ...tileSx,
                 borderColor: selected ? 'text.primary' : 'divider',
                 bgcolor: selected ? 'text.primary' : 'background.paper',
                 color: selected ? 'background.paper' : 'text.primary',
@@ -125,7 +138,13 @@ export function DateStrip({ dates, value, onChange }: DateStripProps) {
         })}
       </Box>
 
-      <IconButton aria-label="Later dates" onClick={() => page(1)} disabled={!canScroll.right} size="small">
+      <IconButton
+        aria-label="Later dates"
+        onClick={() => page(1)}
+        disabled={!canScroll.right}
+        size="small"
+        sx={arrowSx}
+      >
         <ChevronRightIcon />
       </IconButton>
 
