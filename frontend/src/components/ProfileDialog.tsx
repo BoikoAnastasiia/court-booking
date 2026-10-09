@@ -1,6 +1,8 @@
 import PhotoCameraIcon from '@mui/icons-material/PhotoCameraOutlined';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -15,6 +17,7 @@ import { useToast } from '../toast';
 import { UserAvatar } from './UserAvatar';
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // mirrors the server limit
+const FILE_INPUT_ID = 'profile-avatar-input';
 
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, updateUser } = useAuth();
@@ -86,19 +89,48 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
         <DialogTitle>Edit profile</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} alignItems="center" sx={{ pt: 1 }}>
-            <UserAvatar name={name || user.name} src={shownAvatar} size={112} />
+            <input
+              id={FILE_INPUT_ID}
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                pickFile(e.target.files?.[0]);
+                e.target.value = ''; // allow re-picking the same file
+              }}
+            />
+            {/* The avatar itself is a label for the file input: click the circle to upload. */}
+            <ButtonBase
+              component="label"
+              htmlFor={FILE_INPUT_ID}
+              aria-label="Upload photo"
+              sx={{
+                position: 'relative',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                '&:hover .overlay, &.Mui-focusVisible .overlay': { opacity: 1 },
+              }}
+            >
+              <UserAvatar name={name || user.name} src={shownAvatar} size={112} />
+              <Box
+                className="overlay"
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  bgcolor: 'rgba(0,0,0,0.45)',
+                  color: 'common.white',
+                  opacity: 0,
+                  transition: 'opacity 150ms',
+                }}
+              >
+                <PhotoCameraIcon />
+              </Box>
+            </ButtonBase>
             <Stack direction="row" spacing={1}>
-              <Button component="label" variant="outlined" startIcon={<PhotoCameraIcon />}>
+              <Button component="label" htmlFor={FILE_INPUT_ID} variant="outlined" startIcon={<PhotoCameraIcon />}>
                 {shownAvatar ? 'Change photo' : 'Upload photo'}
-                <input
-                  hidden
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    pickFile(e.target.files?.[0]);
-                    e.target.value = ''; // allow re-picking the same file
-                  }}
-                />
               </Button>
               {shownAvatar && (
                 <Button
