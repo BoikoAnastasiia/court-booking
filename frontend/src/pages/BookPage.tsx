@@ -72,7 +72,8 @@ export function BookPage() {
       />
       <Page>
 
-      <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5 }}>
+      {/* Wrap rather than scroll, so every sport (and the selected one) stays visible. */}
+      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         {courts === null
           ? [1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" width={110} height={36} />)
           : sports.map((s) => (
