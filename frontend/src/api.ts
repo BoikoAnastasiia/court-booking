@@ -41,6 +41,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!res.ok) {
     if (res.status === 401 && token) onUnauthorized();
     const err = (data as { error?: { code?: string; message?: string } } | undefined)?.error;
+    if (!err && res.status === 413) {
+      // Rejected by the proxy before reaching the API, so there's no JSON body.
+      throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'The file is too large to upload.');
+    }
     throw new ApiError(res.status, err?.code ?? 'UNKNOWN', err?.message ?? `Request failed (${res.status})`);
   }
   return data as T;
