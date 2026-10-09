@@ -5,6 +5,7 @@ import { adminRouter } from './admin/admin.routes';
 import { authRouter } from './auth/auth.routes';
 import { bookingsRouter } from './bookings/bookings.routes';
 import { courtsRouter } from './courts/courts.routes';
+import { config } from './config';
 import { AppError, errorHandler } from './errors';
 import { systemClock, type Clock } from './lib/time';
 
@@ -21,6 +22,13 @@ export function createApp({ db, clock = systemClock }: AppDeps): Express {
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
+  });
+  // Public settings the frontend needs to render times like the server does.
+  app.get('/api/config', (_req, res) => {
+    res.json({
+      facilityTimezone: config.facilityTimezone,
+      cancellationWindowHours: config.cancellationWindowHours,
+    });
   });
   app.use('/api/auth', authRouter(db));
   app.use('/api/courts', courtsRouter(db, clock));
