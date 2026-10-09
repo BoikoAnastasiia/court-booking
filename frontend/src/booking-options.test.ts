@@ -1,4 +1,4 @@
-import { availableDurations } from './booking-options';
+import { availableDurations, sportsByCourtCount } from './booking-options';
 import type { Slot, SlotStatus } from './types';
 
 const slots = (statuses: SlotStatus[]): Slot[] =>
@@ -17,5 +17,12 @@ describe('availableDurations', () => {
   it('offers nothing for a slot that is not free', () => {
     expect(availableDurations(slots(['past', 'available']), 8)).toEqual([]);
     expect(availableDurations(slots(['mine', 'available']), 8)).toEqual([]);
+  });
+});
+
+describe('sportsByCourtCount', () => {
+  it('orders sports by number of courts, then alphabetically', () => {
+    const courts = ['Squash', 'Padel', 'Tennis', 'Padel', 'Badminton', 'Tennis', 'Padel'].map((sport) => ({ sport }));
+    expect(sportsByCourtCount(courts)).toEqual(['Padel', 'Tennis', 'Badminton', 'Squash']);
   });
 });

@@ -1,133 +1,110 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ApiError, api } from '../api';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Skeleton from '@mui/material/Skeleton';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { api } from '../api';
 import { useAuth } from '../auth';
-import { availableDurations } from '../booking-options';
-import { formatHour, formatPrice, todayIn } from '../format';
-import type { Availability, Court } from '../types';
+import { sportsByCourtCount } from '../booking-options';
+import { nextDays, todayIn } from '../format';
+import type { Court, CourtAvailability, DayAvailability } from '../types';
+import { BookingDialog } from './book/BookingDialog';
+import { CourtSlotsCard } from './book/CourtSlotsCard';
+import { DateStrip } from './book/DateStrip';
 
-const STATUS_LABEL = { available: 'Free', booked: 'Taken', mine: 'Yours', past: 'Past' } as const;
+const DAYS_AHEAD = 14;
 
 export function BookPage() {
   const { config } = useAuth();
   const today = todayIn(config.facilityTimezone);
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [courtId, setCourtId] = useState<number | null>(null);
-  const [date, setDate] = useState(today);
-  const [availability, setAvailability] = useState<Availability | null>(null);
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const dates = useMemo(() => nextDays(today, DAYS_AHEAD), [today]);
+
+  // Sport and date live in the URL so the view survives refresh and can be shared.
+  const [params, setParams] = useSearchParams();
+  const [courts, setCourts] = useState<Court[] | null>(null);
+  const sports = useMemo(() => sportsByCourtCount(courts ?? []), [courts]);
+  const sport = params.get('sport') ?? sports[0] ?? '';
+  const date = dates.includes(params.get('date') ?? '') ? params.get('date')! : today;
+
+  const [day, setDay] = useState<DayAvailability | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{ availability: CourtAvailability; startHour: number } | null>(null);
+
+  function update(next: { sport?: string; date?: string }) {
+    setParams({ sport: next.sport ?? sport, date: next.date ?? date }, { replace: true });
+  }
 
   useEffect(() => {
     api
       .courts()
-      .then((list) => {
-        setCourts(list);
-        setCourtId((current) => current ?? list[0]?.id ?? null);
-      })
-      .catch((err: Error) => setMessage({ kind: 'error', text: err.message }));
+      .then(setCourts)
+      .catch((err: Error) => setError(err.message));
   }, []);
 
-  const loadAvailability = useCallback(async () => {
-    if (courtId === null || !date) return;
+  const load = useCallback(async () => {
+    if (!sport) return;
+    setLoading(true);
     try {
-      setAvailability(await api.availability(courtId, date));
+      setDay(await api.dayAvailability(date, sport));
+      setError(null);
     } catch (err) {
-      setAvailability(null);
-      setMessage({ kind: 'error', text: (err as Error).message });
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
     }
-  }, [courtId, date]);
+  }, [date, sport]);
 
   useEffect(() => {
-    setSelectedHour(null);
-    void loadAvailability();
-  }, [loadAvailability]);
-
-  async function book(durationHours: 1 | 2) {
-    if (courtId === null || selectedHour === null) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      await api.createBooking({ courtId, date, startHour: selectedHour, durationHours });
-      setMessage({
-        kind: 'success',
-        text: `Booked ${formatHour(selectedHour)}–${formatHour(selectedHour + durationHours)} on ${date}.`,
-      });
-    } catch (err) {
-      const text =
-        err instanceof ApiError && err.code === 'SLOT_TAKEN'
-          ? 'Someone just booked that slot. Availability has been refreshed.'
-          : (err as Error).message;
-      setMessage({ kind: 'error', text });
-    } finally {
-      setSelectedHour(null);
-      setBusy(false);
-      void loadAvailability();
-    }
-  }
-
-  const court = availability?.court;
-  const durations = availability && selectedHour !== null ? availableDurations(availability.slots, selectedHour) : [];
+    void load();
+  }, [load]);
 
   return (
-    <section>
-      <h1>Book a court</h1>
-      {courts.length === 0 && !message && <p className="muted">No courts are available right now.</p>}
+    <Stack spacing={3}>
+      <Box>
+        <Typography variant="h4">Book a court</Typography>
+        <Typography color="text.secondary">
+          Pick a sport, a day and a free slot. Times are in {config.facilityTimezone.replace('_', ' ')}.
+        </Typography>
+      </Box>
 
-      <div className="toolbar">
-        <label>
-          Court
-          <select value={courtId ?? ''} onChange={(e) => setCourtId(Number(e.target.value))}>
-            {courts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} · {c.sport} · {formatPrice(c.hourlyPriceCents)}/h
-              </option>
+      <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5 }}>
+        {courts === null
+          ? [1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" width={110} height={36} />)
+          : sports.map((s) => (
+              <Chip
+                key={s}
+                label={s}
+                clickable
+                onClick={() => update({ sport: s })}
+                color={s === sport ? 'primary' : 'default'}
+                variant={s === sport ? 'filled' : 'outlined'}
+                sx={{ fontWeight: 600, px: 1, height: 36, borderRadius: 2 }}
+              />
             ))}
-          </select>
-        </label>
-        <label>
-          Date
-          <input type="date" value={date} min={today} onChange={(e) => setDate(e.target.value)} required />
-        </label>
-      </div>
+      </Stack>
 
-      {message && <p className={message.kind}>{message.text}</p>}
+      <DateStrip dates={dates} value={date} onChange={(d) => update({ date: d })} />
 
-      {court && availability && (
-        <div className="card">
-          <p className="muted">
-            Open {formatHour(court.openHour)}–{formatHour(court.closeHour)} · times in {config.facilityTimezone}
-          </p>
-          <div className="slots">
-            {availability.slots.map((slot) => (
-              <button
-                key={slot.startHour}
-                className={`slot ${slot.status} ${selectedHour === slot.startHour ? 'selected' : ''}`}
-                disabled={slot.status !== 'available'}
-                onClick={() => setSelectedHour(slot.startHour)}
-                aria-pressed={selectedHour === slot.startHour}
-              >
-                <strong>{formatHour(slot.startHour)}</strong>
-                <span>{STATUS_LABEL[slot.status]}</span>
-              </button>
+      {error && <Alert severity="error">{error}</Alert>}
+      {courts?.length === 0 && <Alert severity="info">No courts are available right now.</Alert>}
+
+      <Stack spacing={2} sx={{ opacity: loading && day ? 0.6 : 1, transition: 'opacity 150ms' }}>
+        {!day && loading
+          ? [1, 2].map((i) => <Skeleton key={i} variant="rounded" height={180} />)
+          : day?.courts.map((availability) => (
+              <CourtSlotsCard
+                key={availability.court.id}
+                availability={availability}
+                onPick={(slot) => setSelection({ availability, startHour: slot.startHour })}
+              />
             ))}
-          </div>
+      </Stack>
 
-          {selectedHour !== null && (
-            <div className="confirm">
-              {durations.map((d) => (
-                <button key={d} disabled={busy} onClick={() => book(d)}>
-                  Book {formatHour(selectedHour)}–{formatHour(selectedHour + d)} ({d}h) ·{' '}
-                  {formatPrice(court.hourlyPriceCents * d)}
-                </button>
-              ))}
-              <button className="secondary" onClick={() => setSelectedHour(null)}>
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </section>
+      <BookingDialog selection={selection} date={date} onClose={() => setSelection(null)} onChanged={load} />
+    </Stack>
   );
 }
