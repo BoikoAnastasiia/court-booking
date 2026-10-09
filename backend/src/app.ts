@@ -8,6 +8,7 @@ import { courtsRouter } from './courts/courts.routes';
 import { config } from './config';
 import { AppError, errorHandler } from './errors';
 import { systemClock, type Clock } from './lib/time';
+import { usersRouter } from './users/users.routes';
 
 export interface AppDeps {
   db: Pool;
@@ -34,6 +35,7 @@ export function createApp({ db, clock = systemClock }: AppDeps): Express {
   app.use('/api/courts', courtsRouter(db, clock));
   app.use('/api/bookings', bookingsRouter(db, clock));
   app.use('/api/admin', adminRouter(db));
+  app.use('/api/users', usersRouter(db));
 
   app.use((_req, _res, next) => {
     next(new AppError(404, 'NOT_FOUND', 'Route not found'));

@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler } from 'express';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 
 /**
@@ -38,6 +39,11 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
         details: err.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
       },
     });
+    return;
+  }
+  if (err instanceof MulterError) {
+    const message = err.code === 'LIMIT_FILE_SIZE' ? 'File is too large (max 5 MB)' : err.message;
+    res.status(400).json({ error: { code: 'INVALID_UPLOAD', message } });
     return;
   }
   // Malformed JSON body from express.json()
