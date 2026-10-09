@@ -46,9 +46,16 @@ export async function createBooking(
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    // FOR SHARE: an admin can't deactivate the court or change its hours
-    // between our checks and our insert.
-    const court = await getCourt(client, input.courtId, { forShare: true });
+    // Row lock on the court (FOR NO KEY UPDATE) for the rest of the transaction:
+    // 1. an admin can't deactivate the court or change its hours between our
+    //    checks and our insert;
+    // 2. concurrent bookings for the same court queue up here instead of racing
+    //    into the exclusion-constraint check, where two inserts can deadlock
+    //    each other (Postgres then aborts one with 40P01 -> a 500, not a 409).
+    // The exclusion constraint is still what guarantees no overlap; this lock
+    // only makes conflicts surface cleanly. NO KEY UPDATE (not UPDATE) so it
+    // doesn't block the FK check that inserting a booking performs.
+    const court = await getCourt(client, input.courtId, { lock: true });
     if (!court.isActive) {
       throw new AppError(422, 'COURT_INACTIVE', 'This court is not available for booking');
     }

@@ -58,9 +58,9 @@ export async function listCourts(db: Queryable, opts: { includeInactive: boolean
   return rows;
 }
 
-export async function getCourt(db: Queryable, id: number, opts: { forShare?: boolean } = {}): Promise<Court> {
+export async function getCourt(db: Queryable, id: number, opts: { lock?: boolean } = {}): Promise<Court> {
   const { rows } = await db.query<Court>(
-    `SELECT ${COURT_COLUMNS} FROM courts WHERE id = $1 ${opts.forShare ? 'FOR SHARE' : ''}`,
+    `SELECT ${COURT_COLUMNS} FROM courts WHERE id = $1 ${opts.lock ? 'FOR NO KEY UPDATE' : ''}`,
     [id],
   );
   if (!rows[0]) throw notFound('Court');
