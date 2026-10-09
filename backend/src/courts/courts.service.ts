@@ -122,11 +122,50 @@ export interface Slot {
   status: SlotStatus;
 }
 
+export interface CourtAvailability {
+  court: Court;
+  slots: Slot[];
+}
+
 /**
- * One-hour slots for a court on a facility-local date, from open_hour to
+ * One-hour slots for each court on a facility-local date, from open_hour to
  * close_hour. A slot is unavailable if it overlaps a confirmed booking or
- * has already started.
+ * has already started. Uses a single bookings query for all courts.
  */
+async function buildAvailability(
+  db: Pool,
+  courts: Court[],
+  date: string,
+  viewerId: number,
+  now: Date,
+): Promise<CourtAvailability[]> {
+  const day = parseFacilityDate(date);
+  if (courts.length === 0) return [];
+
+  const { rows: bookings } = await db.query<{ courtId: number; startsAt: Date; endsAt: Date; userId: number }>(
+    `SELECT court_id AS "courtId", starts_at AS "startsAt", ends_at AS "endsAt", user_id AS "userId"
+       FROM bookings
+      WHERE court_id = ANY($1) AND status = 'confirmed'
+        AND tstzrange(starts_at, ends_at, '[)') && tstzrange($2, $3, '[)')`,
+    [courts.map((c) => c.id), facilityHour(day, 0).toJSDate(), facilityHour(day, 24).toJSDate()],
+  );
+
+  return courts.map((court) => {
+    const courtBookings = bookings.filter((b) => b.courtId === court.id);
+    const slots: Slot[] = [];
+    for (let hour = court.openHour; hour < court.closeHour; hour++) {
+      const start = facilityHour(day, hour).toJSDate();
+      const end = facilityHour(day, hour + 1).toJSDate();
+      const overlapping = courtBookings.find((b) => b.startsAt < end && b.endsAt > start);
+      let status: SlotStatus = 'available';
+      if (overlapping) status = overlapping.userId === viewerId ? 'mine' : 'booked';
+      else if (start <= now) status = 'past';
+      slots.push({ startHour: hour, startsAt: start.toISOString(), endsAt: end.toISOString(), status });
+    }
+    return { court, slots };
+  });
+}
+
 export async function getAvailability(
   db: Pool,
   courtId: number,
@@ -134,31 +173,24 @@ export async function getAvailability(
   viewerId: number,
   now: Date,
 ): Promise<{ court: Court; date: string; slots: Slot[] }> {
-  const day = parseFacilityDate(date);
+  parseFacilityDate(date); // validate before hitting the DB
   const court = await getCourt(db, courtId);
   if (!court.isActive) {
     throw new AppError(422, 'COURT_INACTIVE', 'This court is not available for booking');
   }
+  const [result] = await buildAvailability(db, [court], date, viewerId, now);
+  return { court, date, slots: result!.slots };
+}
 
-  const dayOpen = facilityHour(day, court.openHour).toJSDate();
-  const dayClose = facilityHour(day, court.closeHour).toJSDate();
-  const { rows: bookings } = await db.query<{ startsAt: Date; endsAt: Date; userId: number }>(
-    `SELECT starts_at AS "startsAt", ends_at AS "endsAt", user_id AS "userId"
-       FROM bookings
-      WHERE court_id = $1 AND status = 'confirmed'
-        AND tstzrange(starts_at, ends_at, '[)') && tstzrange($2, $3, '[)')`,
-    [courtId, dayOpen, dayClose],
-  );
-
-  const slots: Slot[] = [];
-  for (let hour = court.openHour; hour < court.closeHour; hour++) {
-    const start = facilityHour(day, hour).toJSDate();
-    const end = facilityHour(day, hour + 1).toJSDate();
-    const overlapping = bookings.find((b) => b.startsAt < end && b.endsAt > start);
-    let status: SlotStatus = 'available';
-    if (overlapping) status = overlapping.userId === viewerId ? 'mine' : 'booked';
-    else if (start <= now) status = 'past';
-    slots.push({ startHour: hour, startsAt: start.toISOString(), endsAt: end.toISOString(), status });
-  }
-  return { court, date, slots };
+/** Availability of every active court (optionally of one sport) on a date. */
+export async function getDayAvailability(
+  db: Pool,
+  date: string,
+  sport: string | undefined,
+  viewerId: number,
+  now: Date,
+): Promise<{ date: string; courts: CourtAvailability[] }> {
+  parseFacilityDate(date);
+  const courts = (await listCourts(db, { includeInactive: false })).filter((c) => !sport || c.sport === sport);
+  return { date, courts: await buildAvailability(db, courts, date, viewerId, now) };
 }

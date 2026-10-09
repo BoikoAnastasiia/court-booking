@@ -17,6 +17,7 @@ export interface Booking {
   id: number;
   courtId: number;
   courtName: string;
+  courtSport: string;
   userId: number;
   startsAt: Date;
   endsAt: Date;
@@ -27,7 +28,7 @@ export interface Booking {
 }
 
 const BOOKING_SELECT = `
-  SELECT b.id, b.court_id AS "courtId", c.name AS "courtName", b.user_id AS "userId",
+  SELECT b.id, b.court_id AS "courtId", c.name AS "courtName", c.sport AS "courtSport", b.user_id AS "userId",
          b.starts_at AS "startsAt", b.ends_at AS "endsAt", b.price_cents AS "priceCents",
          b.status, b.created_at AS "createdAt", b.cancelled_at AS "cancelledAt"
     FROM bookings b

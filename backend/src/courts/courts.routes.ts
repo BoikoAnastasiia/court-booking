@@ -9,6 +9,7 @@ import {
   createCourtSchema,
   getAvailability,
   getCourt,
+  getDayAvailability,
   listCourts,
   updateCourt,
   updateCourtSchema,
@@ -16,6 +17,7 @@ import {
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const dateQuery = z.object({ date: z.string() });
+const dayQuery = z.object({ date: z.string(), sport: z.string().optional() });
 
 export function courtsRouter(db: Pool, clock: Clock): Router {
   const router = Router();
@@ -25,6 +27,12 @@ export function courtsRouter(db: Pool, clock: Clock): Router {
   router.get('/', async (req, res) => {
     const isAdmin = currentUser(req).role === 'admin';
     res.json(await listCourts(db, { includeInactive: isAdmin }));
+  });
+
+  // Must be registered before '/:id' so "availability" isn't parsed as an id.
+  router.get('/availability', async (req, res) => {
+    const { date, sport } = dayQuery.parse(req.query);
+    res.json(await getDayAvailability(db, date, sport, currentUser(req).id, clock()));
   });
 
   router.get('/:id', async (req, res) => {

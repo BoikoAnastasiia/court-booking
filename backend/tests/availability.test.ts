@@ -78,3 +78,32 @@ describe('availability', () => {
     expect(res.status).toBe(422);
   });
 });
+
+describe('day availability across courts', () => {
+  it('returns every active court of a sport with its slots', async () => {
+    const padel1 = await createCourt(ctx.db, { name: 'Padel 1', openHour: 8, closeHour: 10 });
+    await createCourt(ctx.db, { name: 'Padel Old', isActive: false });
+    const tennis = await createCourt(ctx.db, { name: 'Tennis', openHour: 8, closeHour: 23 });
+    await ctx.db.query(`UPDATE courts SET sport = 'Tennis' WHERE id = $1`, [tennis]);
+    ctx.setNow(at(6));
+    await request(ctx.server)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${bob.token}`)
+      .send({ courtId: padel1, date: TEST_DATE, startHour: 9, durationHours: 1 });
+
+    const res = await request(ctx.server)
+      .get('/api/courts/availability')
+      .query({ date: TEST_DATE, sport: 'padel' })
+      .set('Authorization', `Bearer ${alice.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.courts).toHaveLength(1);
+    expect(res.body.courts[0].court.name).toBe('Padel 1');
+    expect(res.body.courts[0].slots.map((s: { status: string }) => s.status)).toEqual(['available', 'booked']);
+
+    const all = await request(ctx.server)
+      .get('/api/courts/availability')
+      .query({ date: TEST_DATE })
+      .set('Authorization', `Bearer ${alice.token}`);
+    expect(all.body.courts.map((c: { court: { name: string } }) => c.court.name)).toEqual(['Padel 1', 'Tennis']);
+  });
+});

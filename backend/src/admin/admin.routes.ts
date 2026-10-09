@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { z } from 'zod';
 import { authenticate, requireRole } from '../auth/auth.middleware';
 import { facilityDayBounds, parseFacilityDate } from '../lib/time';
+import { avatarUrlSql } from '../users/users.service';
 
 const dateQuery = z.object({ date: z.string() });
 
@@ -10,9 +11,11 @@ interface AdminBookingRow {
   id: number;
   courtId: number;
   courtName: string;
+  courtSport: string;
   userId: number;
   userName: string;
   userEmail: string;
+  userAvatarUrl: string | null;
   startsAt: Date;
   endsAt: Date;
   priceCents: number;
@@ -31,8 +34,9 @@ export function adminRouter(db: Pool): Router {
     const { date } = dateQuery.parse(req.query);
     const { start, end } = facilityDayBounds(parseFacilityDate(date));
     const { rows } = await db.query<AdminBookingRow>(
-      `SELECT b.id, b.court_id AS "courtId", c.name AS "courtName",
+      `SELECT b.id, b.court_id AS "courtId", c.name AS "courtName", c.sport AS "courtSport",
               b.user_id AS "userId", u.name AS "userName", u.email AS "userEmail",
+              ${avatarUrlSql('u')} AS "userAvatarUrl",
               b.starts_at AS "startsAt", b.ends_at AS "endsAt",
               b.price_cents AS "priceCents", b.status
          FROM bookings b

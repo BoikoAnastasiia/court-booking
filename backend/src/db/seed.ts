@@ -11,23 +11,39 @@ const USERS = [
 ] as const;
 
 const COURTS = [
-  { name: 'Padel 1', sport: 'padel', price: 2400, open: 8, close: 23, active: true },
-  { name: 'Padel 2', sport: 'padel', price: 2400, open: 8, close: 23, active: true },
-  { name: 'Tennis Centre Court', sport: 'tennis', price: 3000, open: 7, close: 22, active: true },
-  { name: 'Old Squash Court', sport: 'squash', price: 1500, open: 9, close: 21, active: false },
+  { name: 'Padel 1', sport: 'Padel', price: 2400, open: 8, close: 23, active: true },
+  { name: 'Padel 2', sport: 'Padel', price: 2400, open: 8, close: 23, active: true },
+  { name: 'Padel 3 · Panoramic', sport: 'Padel', price: 2800, open: 8, close: 23, active: true },
+  { name: 'Indoor Court 1', sport: 'Tennis Indoor', price: 3200, open: 7, close: 22, active: true },
+  { name: 'Indoor Court 2', sport: 'Tennis Indoor', price: 3200, open: 7, close: 22, active: true },
+  { name: 'Clay Court', sport: 'Tennis Outdoor', price: 2600, open: 8, close: 21, active: true },
+  { name: 'Hard Court', sport: 'Tennis Outdoor', price: 2400, open: 8, close: 21, active: true },
+  { name: 'Squash Court A', sport: 'Squash', price: 1600, open: 7, close: 23, active: true },
+  { name: 'Badminton Hall', sport: 'Badminton', price: 1400, open: 8, close: 22, active: true },
+  { name: 'Pickleball Court', sport: 'Pickleball', price: 1800, open: 9, close: 21, active: true },
+  { name: 'Squash Court B (closed)', sport: 'Squash', price: 1500, open: 9, close: 21, active: false },
 ] as const;
 
 // [court index, user email, day offset from today, start hour, duration]
 const BOOKINGS: [number, string, number, number, 1 | 2][] = [
   [0, 'alice@example.com', -2, 18, 2],
-  [3, 'bob@example.com', -1, 10, 1], // history on the now-inactive court
+  [10, 'bob@example.com', -1, 10, 1], // history on the now-inactive court
   [1, 'bob@example.com', -1, 19, 1],
+  [3, 'alice@example.com', -1, 9, 1],
   [0, 'alice@example.com', 0, 21, 1],
-  [2, 'bob@example.com', 0, 20, 1],
+  [3, 'bob@example.com', 0, 20, 1],
+  [1, 'bob@example.com', 0, 19, 2],
+  [5, 'alice@example.com', 0, 18, 1],
   [0, 'bob@example.com', 1, 9, 2],
   [1, 'alice@example.com', 1, 18, 1],
-  [2, 'alice@example.com', 2, 10, 2],
+  [2, 'bob@example.com', 1, 19, 2],
+  [6, 'bob@example.com', 1, 10, 1],
+  [7, 'alice@example.com', 1, 20, 1],
+  [3, 'alice@example.com', 2, 10, 2],
+  [8, 'bob@example.com', 2, 18, 1],
+  [9, 'alice@example.com', 2, 11, 1],
   [0, 'bob@example.com', 3, 20, 2],
+  [4, 'alice@example.com', 3, 17, 2],
 ];
 
 /** Seeds demo data once; does nothing if any user already exists. */
