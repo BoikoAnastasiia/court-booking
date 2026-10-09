@@ -29,7 +29,14 @@ export function CourtSlotsCard({ availability: { court, slots }, onPick }: Court
           </Box>
           <Chip label={`${formatPrice(court.hourlyPriceCents)} / h`} variant="outlined" />
         </Stack>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(124px, 1fr))', gap: 1 }}>
+        {/* Phones: 4 compact columns so a whole court fits on screen. */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(4, 1fr)', sm: 'repeat(auto-fill, minmax(124px, 1fr))' },
+            gap: { xs: 0.75, sm: 1 },
+          }}
+        >
           {slots.map((slot) => (
             <SlotButton key={slot.startHour} slot={slot} onPick={() => onPick(slot)} />
           ))}
@@ -39,14 +46,40 @@ export function CourtSlotsCard({ availability: { court, slots }, onPick }: Court
   );
 }
 
+// On phones a slot shows only its start time; the end time is implied (1 hour).
+const desktopOnly = { display: { xs: 'none', sm: 'inline' } } as const;
+const phoneOnly = { display: { xs: 'inline', sm: 'none' } } as const;
+
 function SlotButton({ slot, onPick }: { slot: Slot; onPick: () => void }) {
   const label = `${formatHour(slot.startHour)} – ${formatHour(slot.startHour + 1)}`;
+  // One element, so the column-stacked "mine" button keeps the time on one line.
+  const text = (
+    <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
+      {formatHour(slot.startHour)}
+      <Box component="span" sx={desktopOnly}>
+        &nbsp;– {formatHour(slot.startHour + 1)}
+      </Box>
+    </Box>
+  );
+  const compact = { minWidth: 0, px: { xs: 0.5, sm: 2 }, fontSize: { xs: '0.8125rem', sm: '0.875rem' } };
+
   if (slot.status === 'mine') {
     return (
-      <Button variant="contained" color="info" disableRipple sx={{ pointerEvents: 'none', flexDirection: 'column', py: 0.5 }}>
-        {label}
+      <Button
+        variant="contained"
+        color="info"
+        disableRipple
+        aria-label={`${label} your booking`}
+        sx={{ ...compact, pointerEvents: 'none', flexDirection: 'column', py: 0.5 }}
+      >
+        {text}
         <Typography variant="caption" lineHeight={1}>
-          Your booking
+          <Box component="span" sx={desktopOnly}>
+            Your booking
+          </Box>
+          <Box component="span" sx={phoneOnly}>
+            Yours
+          </Box>
         </Typography>
       </Button>
     );
@@ -60,17 +93,26 @@ function SlotButton({ slot, onPick }: { slot: Slot; onPick: () => void }) {
       onClick={onPick}
       aria-label={`${label} ${available ? 'available' : slot.status}`}
       sx={{
+        ...compact,
         position: 'relative',
         borderColor: 'divider',
-        py: 1.25,
+        py: { xs: 1, sm: 1.25 },
         '&:hover': { borderColor: 'primary.main', color: 'primary.main' },
       }}
     >
-      {label}
+      {text}
       {available && (
         <Box
           component="span"
-          sx={{ position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: '50%', bgcolor: 'success.main' }}
+          sx={{
+            position: 'absolute',
+            top: { xs: 4, sm: 6 },
+            right: { xs: 4, sm: 6 },
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            bgcolor: 'success.main',
+          }}
         />
       )}
     </Button>
