@@ -2,7 +2,6 @@ import SportsTennisIcon from '@mui/icons-material/SportsTennis';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -58,11 +57,10 @@ export function Layout() {
           <UserMenu />
         </Toolbar>
       </AppBar>
-      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 } }}>
-        <Box component="main">
-          <Outlet />
-        </Box>
-      </Container>
+      {/* Pages render their own <Page> container, so a hero can span the full width. */}
+      <Box component="main">
+        <Outlet />
+      </Box>
     </>
   );
 }

@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type CourtInput } from '../api';
 import { sportsByCourtCount } from '../booking-options';
 import { DataTable } from '../components/DataTable';
+import { Page } from '../components/Page';
 import { formatHour, formatPrice } from '../format';
 import { useToast } from '../toast';
 import type { Court } from '../types';
@@ -101,7 +102,7 @@ export function AdminCourtsPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Page>
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
         <Box>
           <Typography variant="h4">Courts</Typography>
@@ -133,6 +134,6 @@ export function AdminCourtsPage() {
         onSubmit={save}
         onClose={() => setEditing(null)}
       />
-    </Stack>
+    </Page>
   );
 }

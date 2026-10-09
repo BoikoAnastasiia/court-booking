@@ -1,14 +1,14 @@
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { sportsByCourtCount } from '../booking-options';
+import { Hero } from '../components/Hero';
+import { Page } from '../components/Page';
 import { nextDays, todayIn } from '../format';
 import type { Court, CourtAvailability, DayAvailability } from '../types';
 import { BookingDialog } from './book/BookingDialog';
@@ -63,13 +63,12 @@ export function BookPage() {
   }, [load]);
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4">Book a court</Typography>
-        <Typography color="text.secondary">
-          Pick a sport, a day and a free slot. Times are in {config.facilityTimezone.replace('_', ' ')}.
-        </Typography>
-      </Box>
+    <>
+      <Hero
+        title="Book a court"
+        subtitle={`Pick a sport, a day and a free slot. Times are in ${config.facilityTimezone.replace('_', ' ')}.`}
+      />
+      <Page>
 
       <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 0.5 }}>
         {courts === null
@@ -105,6 +104,7 @@ export function BookPage() {
       </Stack>
 
       <BookingDialog selection={selection} date={date} onClose={() => setSelection(null)} onChanged={load} />
-    </Stack>
+      </Page>
+    </>
   );
 }

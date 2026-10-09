@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { DataTable } from '../components/DataTable';
+import { Page } from '../components/Page';
 import { StatusChip } from '../components/StatusChip';
 import { UserAvatar } from '../components/UserAvatar';
 import { addDays, formatDate, formatPrice, formatTime, todayIn } from '../format';
@@ -97,7 +98,7 @@ export function AdminDayPage() {
   );
 
   return (
-    <Stack spacing={3}>
+    <Page>
       <Box>
         <Typography variant="h4">Day overview</Typography>
         <Typography color="text.secondary">
@@ -140,6 +141,6 @@ export function AdminDayPage() {
           </Typography>
         </>
       )}
-    </Stack>
+    </Page>
   );
 }

@@ -2,7 +2,6 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
-import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Tooltip from '@mui/material/Tooltip';
@@ -14,6 +13,7 @@ import { api } from '../api';
 import { useAuth } from '../auth';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
+import { Page } from '../components/Page';
 import { StatusChip } from '../components/StatusChip';
 import { dateIn, formatDate, formatDateTime, formatPrice, formatTime } from '../format';
 import { useToast } from '../toast';
@@ -113,7 +113,7 @@ export function MyBookingsPage() {
   }
 
   return (
-    <Stack spacing={3}>
+    <Page>
       <Box>
         <Typography variant="h4">My bookings</Typography>
         <Typography color="text.secondary">
@@ -156,6 +156,6 @@ export function MyBookingsPage() {
           </Typography>
         )}
       </ConfirmDialog>
-    </Stack>
+    </Page>
   );
 }
