@@ -2,6 +2,7 @@ import SportsTennisIcon from '@mui/icons-material/SportsTennis';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -30,32 +31,35 @@ export function Layout() {
         elevation={0}
         sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
       >
-        <Toolbar sx={{ gap: { xs: 1, sm: 3 } }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <SportsTennisIcon color="primary" />
-            <Typography variant="h6" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              Court Booking
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={0.5} sx={{ flex: 1 }}>
-            {user &&
-              NAV[user.role].map((item) => (
-                <Button
-                  key={item.to}
-                  component={NavLink}
-                  to={item.to}
-                  color="inherit"
-                  sx={{
-                    color: 'text.secondary',
-                    '&.active': { color: 'primary.main', bgcolor: 'action.selected' },
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ))}
-          </Stack>
-          <UserMenu />
-        </Toolbar>
+        {/* Same max-width container as <Page> and <Hero>, so the header lines up with the content. */}
+        <Container maxWidth="lg">
+          <Toolbar disableGutters sx={{ gap: { xs: 1, sm: 3 } }}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <SportsTennisIcon color="primary" />
+              <Typography variant="h6" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                Court Booking
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.5} sx={{ flex: 1 }}>
+              {user &&
+                NAV[user.role].map((item) => (
+                  <Button
+                    key={item.to}
+                    component={NavLink}
+                    to={item.to}
+                    color="inherit"
+                    sx={{
+                      color: 'text.secondary',
+                      '&.active': { color: 'primary.main', bgcolor: 'action.selected' },
+                    }}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+            </Stack>
+            <UserMenu />
+          </Toolbar>
+        </Container>
       </AppBar>
       {/* Pages render their own <Page> container, so a hero can span the full width. */}
       <Box component="main">
