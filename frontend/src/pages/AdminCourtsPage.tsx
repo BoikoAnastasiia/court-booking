@@ -166,13 +166,15 @@ export function AdminCourtsPage() {
                     {c.isActive ? 'active' : 'inactive'}
                   </span>
                 </td>
-                <td className="actions">
-                  <button className="secondary small" onClick={() => setEditingId(c.id)}>
+                <td>
+                  <div className="actions">
+                    <button className="secondary small" onClick={() => setEditingId(c.id)}>
                     Edit
                   </button>
                   <button className={`small ${c.isActive ? 'danger' : ''}`} onClick={() => toggleActive(c)}>
                     {c.isActive ? 'Deactivate' : 'Activate'}
                   </button>
+                  </div>
                 </td>
               </tr>
             ),
