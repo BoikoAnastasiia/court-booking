@@ -54,7 +54,7 @@ export async function resizeAvatar(input: Buffer): Promise<Buffer> {
   try {
     return await sharp(input, { limitInputPixels: 40_000_000 })
       .rotate() // apply EXIF orientation before metadata is dropped
-      .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover', position: 'attention' })
+      .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover', position: 'centre' })
       .webp({ quality: 82 })
       .toBuffer();
   } catch {
