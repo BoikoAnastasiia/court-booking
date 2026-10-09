@@ -15,7 +15,9 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.11",
     "@mui/material": "^7.3.11",
+    "@mui/x-date-pickers": "^8.29.4",
     "@tanstack/react-table": "^8.21.3",
+    "dayjs": "^1.11.23",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.6"

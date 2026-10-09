@@ -15,12 +15,14 @@ import { BookingDialog } from './book/BookingDialog';
 import { CourtSlotsCard } from './book/CourtSlotsCard';
 import { DateStrip } from './book/DateStrip';
 
-const DAYS_AHEAD = 14;
+// How far ahead the date picker goes. A UX choice, not a server rule:
+// the API accepts any future date.
+const BOOKING_HORIZON_DAYS = 90;
 
 export function BookPage() {
   const { config } = useAuth();
   const today = todayIn(config.facilityTimezone);
-  const dates = useMemo(() => nextDays(today, DAYS_AHEAD), [today]);
+  const dates = useMemo(() => nextDays(today, BOOKING_HORIZON_DAYS), [today]);
 
   // Sport and date live in the URL so the view survives refresh and can be shared.
   const [params, setParams] = useSearchParams();
