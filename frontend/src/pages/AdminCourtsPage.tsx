@@ -1,88 +1,33 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/EditOutlined';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
+import Skeleton from '@mui/material/Skeleton';
+import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import { createColumnHelper } from '@tanstack/react-table';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type CourtInput } from '../api';
+import { sportsByCourtCount } from '../booking-options';
+import { DataTable } from '../components/DataTable';
 import { formatHour, formatPrice } from '../format';
+import { useToast } from '../toast';
 import type { Court } from '../types';
+import { CourtDialog, EMPTY_COURT } from './admin/CourtDialog';
 
-const EMPTY: CourtInput = { name: '', sport: 'padel', hourlyPriceCents: 2000, openHour: 8, closeHour: 22, isActive: true };
-const HOURS = Array.from({ length: 25 }, (_, h) => h);
-
-function CourtForm({
-  initial,
-  submitLabel,
-  onSubmit,
-  onCancel,
-}: {
-  initial: CourtInput;
-  submitLabel: string;
-  onSubmit: (input: CourtInput) => Promise<void>;
-  onCancel?: () => void;
-}) {
-  const [form, setForm] = useState(initial);
-  const [price, setPrice] = useState((initial.hourlyPriceCents / 100).toFixed(2));
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    try {
-      await onSubmit({ ...form, hourlyPriceCents: Math.round(Number(price) * 100) });
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }
-
-  return (
-    <form className="court-form" onSubmit={submit}>
-      <label>
-        Name
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-      </label>
-      <label>
-        Sport
-        <input value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} required />
-      </label>
-      <label>
-        Price / hour (€)
-        <input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required />
-      </label>
-      <label>
-        Opens
-        <select value={form.openHour} onChange={(e) => setForm({ ...form, openHour: Number(e.target.value) })}>
-          {HOURS.slice(0, 24).map((h) => (
-            <option key={h} value={h}>
-              {formatHour(h)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Closes
-        <select value={form.closeHour} onChange={(e) => setForm({ ...form, closeHour: Number(e.target.value) })}>
-          {HOURS.slice(1).map((h) => (
-            <option key={h} value={h}>
-              {formatHour(h)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="actions">
-        <button type="submit">{submitLabel}</button>
-        {onCancel && (
-          <button type="button" className="secondary" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
-      </div>
-      {error && <p className="error">{error}</p>}
-    </form>
-  );
-}
+const column = createColumnHelper<Court>();
 
 export function AdminCourtsPage() {
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [creating, setCreating] = useState(false);
+  const toast = useToast();
+  const [courts, setCourts] = useState<Court[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // null = closed, 'new' = create, Court = edit
+  const [editing, setEditing] = useState<Court | 'new' | null>(null);
 
   const load = useCallback(() => {
     api
@@ -92,96 +37,102 @@ export function AdminCourtsPage() {
   }, []);
   useEffect(load, [load]);
 
-  async function toggleActive(court: Court) {
-    setError(null);
-    try {
-      await api.updateCourt(court.id, { isActive: !court.isActive });
-      load();
-    } catch (err) {
-      setError((err as Error).message);
+  const toggleActive = useCallback(
+    async (court: Court) => {
+      try {
+        await api.updateCourt(court.id, { isActive: !court.isActive });
+        toast(`${court.name} ${court.isActive ? 'deactivated' : 'activated'}`);
+        load();
+      } catch (err) {
+        toast((err as Error).message, 'error');
+      }
+    },
+    [load, toast],
+  );
+
+  const columns = useMemo(
+    () => [
+      column.accessor('name', { header: 'Name', cell: (info) => <strong>{info.getValue()}</strong> }),
+      column.accessor('sport', { header: 'Sport' }),
+      column.accessor('hourlyPriceCents', {
+        header: 'Price / h',
+        meta: { align: 'right' },
+        cell: (info) => formatPrice(info.getValue()),
+      }),
+      column.accessor('openHour', {
+        header: 'Hours',
+        cell: ({ row }) => `${formatHour(row.original.openHour)}–${formatHour(row.original.closeHour)}`,
+      }),
+      column.accessor('isActive', {
+        header: 'Bookable',
+        cell: ({ row }) => (
+          <FormControlLabel
+            control={<Switch checked={row.original.isActive} onChange={() => toggleActive(row.original)} size="small" />}
+            label={row.original.isActive ? 'Active' : 'Inactive'}
+          />
+        ),
+      }),
+      column.display({
+        id: 'actions',
+        header: '',
+        meta: { align: 'right' },
+        cell: ({ row }) => (
+          <Tooltip title="Edit">
+            <IconButton size="small" onClick={() => setEditing(row.original)} aria-label={`Edit ${row.original.name}`}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ),
+      }),
+    ],
+    [toggleActive],
+  );
+
+  async function save(input: CourtInput) {
+    if (editing === 'new') {
+      await api.createCourt(input);
+      toast(`${input.name} created`);
+    } else if (editing) {
+      await api.updateCourt(editing.id, input);
+      toast(`${input.name} saved`);
     }
+    setEditing(null);
+    load();
   }
 
   return (
-    <section>
-      <h1>Courts</h1>
-      {error && <p className="error">{error}</p>}
-
-      {creating ? (
-        <div className="card">
-          <h2>New court</h2>
-          <CourtForm
-            initial={EMPTY}
-            submitLabel="Create court"
-            onSubmit={async (input) => {
-              await api.createCourt(input);
-              setCreating(false);
-              load();
-            }}
-            onCancel={() => setCreating(false)}
-          />
-        </div>
+    <Stack spacing={3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+        <Box>
+          <Typography variant="h4">Courts</Typography>
+          <Typography color="text.secondary">
+            Deactivated courts can't be booked, but their booking history is kept.
+          </Typography>
+        </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing('new')} sx={{ flexShrink: 0 }}>
+          Add court
+        </Button>
+      </Stack>
+      {error && <Alert severity="error">{error}</Alert>}
+      {!courts ? (
+        <Skeleton variant="rounded" height={320} />
       ) : (
-        <button onClick={() => setCreating(true)}>+ Add court</button>
+        <DataTable
+          data={courts}
+          columns={columns}
+          getRowId={(c) => String(c.id)}
+          initialSorting={[{ id: 'sport', desc: false }]}
+          isRowMuted={(c) => !c.isActive}
+          emptyText="No courts yet."
+        />
       )}
-
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Sport</th>
-            <th>Price / h</th>
-            <th>Hours</th>
-            <th>Status</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {courts.map((c) =>
-            editingId === c.id ? (
-              <tr key={c.id}>
-                <td colSpan={6}>
-                  <CourtForm
-                    initial={c}
-                    submitLabel="Save"
-                    onSubmit={async (input) => {
-                      await api.updateCourt(c.id, input);
-                      setEditingId(null);
-                      load();
-                    }}
-                    onCancel={() => setEditingId(null)}
-                  />
-                </td>
-              </tr>
-            ) : (
-              <tr key={c.id} className={c.isActive ? '' : 'cancelled'}>
-                <td>{c.name}</td>
-                <td>{c.sport}</td>
-                <td>{formatPrice(c.hourlyPriceCents)}</td>
-                <td>
-                  {formatHour(c.openHour)}–{formatHour(c.closeHour)}
-                </td>
-                <td>
-                  <span className={`badge ${c.isActive ? 'confirmed' : 'cancelled'}`}>
-                    {c.isActive ? 'active' : 'inactive'}
-                  </span>
-                </td>
-                <td>
-                  <div className="actions">
-                    <button className="secondary small" onClick={() => setEditingId(c.id)}>
-                    Edit
-                  </button>
-                  <button className={`small ${c.isActive ? 'danger' : ''}`} onClick={() => toggleActive(c)}>
-                    {c.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                  </div>
-                </td>
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
-      <p className="muted">Deactivated courts can't be booked, but their booking history is kept.</p>
-    </section>
+      <CourtDialog
+        initial={editing === 'new' ? EMPTY_COURT : editing}
+        title={editing === 'new' ? 'New court' : 'Edit court'}
+        sports={sportsByCourtCount(courts ?? [])}
+        onSubmit={save}
+        onClose={() => setEditing(null)}
+      />
+    </Stack>
   );
 }
