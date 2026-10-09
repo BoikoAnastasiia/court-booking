@@ -1,3 +1,6 @@
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, setUnauthorizedHandler, tokenStore } from './api';
 import type { AppConfig, User } from './types';
@@ -7,6 +10,8 @@ interface AuthState {
   config: AppConfig;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
+  /** Replace the cached user after a profile change. */
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -42,12 +47,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => (config ? { user, config, login, logout } : null),
+    () => (config ? { user, config, login, logout, updateUser: setUser } : null),
     [user, config, login, logout],
   );
 
-  if (loading) return <p className="center muted">Loading…</p>;
-  if (error || !value) return <p className="center error">{error}</p>;
+  if (loading) {
+    return (
+      <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+  if (error || !value) {
+    return (
+      <Box sx={{ maxWidth: 480, mx: 'auto', mt: 10, px: 2 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

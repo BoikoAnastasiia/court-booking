@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth';
+import { ToastProvider } from './toast';
 import { Layout } from './components/Layout';
 import type { Role } from './types';
 import { AdminCourtsPage } from './pages/AdminCourtsPage';
@@ -41,10 +42,12 @@ function AppRoutes() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

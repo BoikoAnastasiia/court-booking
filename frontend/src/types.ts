@@ -5,6 +5,7 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  avatarUrl: string | null;
 }
 
 export interface Court {
@@ -26,16 +27,21 @@ export interface Slot {
   status: SlotStatus;
 }
 
-export interface Availability {
+export interface CourtAvailability {
   court: Court;
-  date: string;
   slots: Slot[];
+}
+
+export interface DayAvailability {
+  date: string;
+  courts: CourtAvailability[];
 }
 
 export interface Booking {
   id: number;
   courtId: number;
   courtName: string;
+  courtSport: string;
   startsAt: string;
   endsAt: string;
   priceCents: number;
@@ -50,6 +56,7 @@ export interface MyBooking extends Booking {
 export interface AdminBooking extends Booking {
   userName: string;
   userEmail: string;
+  userAvatarUrl: string | null;
 }
 
 export interface AdminDay {

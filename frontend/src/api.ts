@@ -1,12 +1,4 @@
-import type {
-  AdminDay,
-  AppConfig,
-  Availability,
-  Booking,
-  Court,
-  MyBooking,
-  User,
-} from './types';
+import type { AdminDay, AppConfig, Booking, Court, DayAvailability, MyBooking, User } from './types';
 
 const TOKEN_KEY = 'court-booking.token';
 
@@ -36,12 +28,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {};
   const token = tokenStore.get();
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  // FormData sets its own multipart Content-Type (with boundary).
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   const res = await fetch(`/api${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
   const data = res.status === 204 ? undefined : await res.json().catch(() => undefined);
   if (!res.ok) {
@@ -62,9 +56,17 @@ export const api = {
     request<{ token: string; user: User }>('POST', '/auth/login', { email, password }),
   me: () => request<User>('GET', '/auth/me'),
 
+  updateProfile: (name: string) => request<User>('PATCH', '/users/me', { name }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    return request<User>('PUT', '/users/me/avatar', form);
+  },
+  removeAvatar: () => request<User>('DELETE', '/users/me/avatar'),
+
   courts: () => request<Court[]>('GET', '/courts'),
-  availability: (courtId: number, date: string) =>
-    request<Availability>('GET', `/courts/${courtId}/availability${q({ date })}`),
+  dayAvailability: (date: string, sport: string) =>
+    request<DayAvailability>('GET', `/courts/availability${q({ date, sport })}`),
   createCourt: (input: CourtInput) => request<Court>('POST', '/courts', input),
   updateCourt: (id: number, input: Partial<CourtInput>) => request<Court>('PATCH', `/courts/${id}`, input),
 
