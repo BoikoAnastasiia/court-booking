@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5173,
     // In dev, forward API calls to the backend (nginx does this in Docker).
-    proxy: { '/api': process.env.VITE_API_PROXY ?? 'http://localhost:4000' },
+    proxy: { '/api': { target: process.env.VITE_API_PROXY ?? 'http://localhost:4000', ws: true } },
   },
   test: {
     environment: 'jsdom',

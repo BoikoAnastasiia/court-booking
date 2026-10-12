@@ -33,10 +33,13 @@ export function BookingDialog({ selection, date, onClose, onChanged }: BookingDi
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset only when a different slot is picked, not when the same selection
+  // is refreshed with new availability from a realtime update.
+  const slotKey = selection && `${selection.availability.court.id}@${selection.startHour}`;
   useEffect(() => {
     setDuration(1);
     setError(null);
-  }, [selection]);
+  }, [slotKey]);
 
   // Keep the last selection rendered while the dialog animates closed.
   const [shown, setShown] = useState(selection);
@@ -48,14 +51,16 @@ export function BookingDialog({ selection, date, onClose, onChanged }: BookingDi
   const { court, slots } = shown.availability;
   const { startHour } = shown;
   const durations = availableDurations(slots, startHour);
-  const endHour = startHour + duration;
+  // If the second hour was taken meanwhile, fall back to 1 hour.
+  const hours: 1 | 2 = durations.includes(duration) ? duration : 1;
+  const endHour = startHour + hours;
   const time = `${formatHour(startHour)}–${formatHour(endHour)}`;
 
   async function confirm() {
     setBusy(true);
     setError(null);
     try {
-      await api.createBooking({ courtId: court.id, date, startHour, durationHours: duration });
+      await api.createBooking({ courtId: court.id, date, startHour, durationHours: hours });
       toast(`Booked! ${court.name}, ${formatDate(date, { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`);
       onChanged();
       onClose();
@@ -85,7 +90,7 @@ export function BookingDialog({ selection, date, onClose, onChanged }: BookingDi
               exclusive
               fullWidth
               color="primary"
-              value={duration}
+              value={hours}
               onChange={(_e, value: 1 | 2 | null) => value && setDuration(value)}
             >
               <ToggleButton value={1}>1 hour</ToggleButton>
@@ -103,7 +108,7 @@ export function BookingDialog({ selection, date, onClose, onChanged }: BookingDi
           <Summary label="Court" value={`${court.name} · ${court.sport}`} />
           <Summary label="Date" value={formatDate(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} />
           <Summary label="Time" value={time} />
-          <Summary label="Total" value={<strong>{formatPrice(court.hourlyPriceCents * duration)}</strong>} />
+          <Summary label="Total" value={<strong>{formatPrice(court.hourlyPriceCents * hours)}</strong>} />
           <Alert severity="info" variant="outlined">
             Free cancellation up to {config.cancellationWindowHours} hours before start.
           </Alert>

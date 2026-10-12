@@ -10,14 +10,16 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { createColumnHelper } from '@tanstack/react-table';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import { DataTable } from '../components/DataTable';
+import { LiveBadge } from '../components/LiveBadge';
 import { Page } from '../components/Page';
 import { StatusChip } from '../components/StatusChip';
 import { UserAvatar } from '../components/UserAvatar';
 import { addDays, formatDate, formatPrice, formatTime, todayIn } from '../format';
+import { useRealtime } from '../realtime';
 import type { AdminBooking, AdminDay } from '../types';
 
 const column = createColumnHelper<AdminBooking>();
@@ -43,14 +45,29 @@ export function AdminDayPage() {
   const [day, setDay] = useState<AdminDay | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Only the latest request may update the view (fast date changes, realtime refreshes).
+  const latestRequest = useRef(0);
+  const load = useCallback(async () => {
     if (!date) return;
-    setError(null);
-    api
-      .adminDay(date)
-      .then(setDay)
-      .catch((err: Error) => setError(err.message));
+    const requestId = ++latestRequest.current;
+    try {
+      const result = await api.adminDay(date);
+      if (requestId !== latestRequest.current) return;
+      setDay(result);
+      setError(null);
+    } catch (err) {
+      if (requestId === latestRequest.current) setError((err as Error).message);
+    }
   }, [date]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // New bookings/cancellations for this day show up (with revenue) without a refresh.
+  const realtimeStatus = useRealtime((event) => {
+    if (event.type !== 'availability.changed' || event.date === date) void load();
+  });
 
   const columns = useMemo(
     () => [
@@ -117,6 +134,8 @@ export function AdminDayPage() {
         <Button onClick={() => setDate(today)} disabled={date === today}>
           Today
         </Button>
+        <Box sx={{ flex: 1 }} />
+        <LiveBadge status={realtimeStatus} />
       </Stack>
 
       {error && <Alert severity="error">{error}</Alert>}
