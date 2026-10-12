@@ -56,6 +56,8 @@ React + Vite · Express 5 · PostgreSQL with plain SQL migrations (no ORM) · Zo
 
 **PostgreSQL over NoSQL** — our data is structured and we aren't going to scale horizontally, so it's a vote for an SQL database. And Postgress could enforce "no overlapping time ranges" itself, which is how double bookings are blocked.
 
+**Why WebSockets and not SSE:** updates only flow one way, so SSE would also work. WebSockets let the login happen in a message instead of the URL.
+
 ## How double bookings are prevented
 
 The database itself guarantees it, not the app code. The bookings table has a [constraint](backend/src/migrations/001_init.sql) that says:
@@ -69,6 +71,7 @@ EXCLUDE USING gist (court_id WITH =, tstzrange(starts_at, ends_at) WITH &&)
 
 - If two users submit the same slot at the same instant, Postgres accepts one insert and rejects the other. The API turns that rejection into `409 SLOT_TAKEN`.
 - Cancelled bookings are ignored by the constraint, so a cancelled slot can be booked again.
+- One backend instance only: the list of connected browsers lives in that server's memory. With several instances, events would go through Postgres LISTEN/NOTIFY or Redis, so every instance can pass them on.
 
 **Tests:** one fires 10 simultaneous requests for the same slot and checks that exactly one wins; another inserts directly into the database (skipping the API) to prove the rule doesn't depend on app code.
 
