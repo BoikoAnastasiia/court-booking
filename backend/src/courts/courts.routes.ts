@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authenticate, currentUser, requireRole } from '../auth/auth.middleware';
 import { notFound } from '../errors';
 import type { Clock } from '../lib/time';
+import type { Publisher } from '../realtime/hub';
 import {
   createCourt,
   createCourtSchema,
@@ -19,7 +20,7 @@ const idParam = z.object({ id: z.coerce.number().int().positive() });
 const dateQuery = z.object({ date: z.string() });
 const dayQuery = z.object({ date: z.string(), sport: z.string().optional() });
 
-export function courtsRouter(db: Pool, clock: Clock): Router {
+export function courtsRouter(db: Pool, clock: Clock, realtime: Publisher): Router {
   const router = Router();
   router.use(authenticate);
 
@@ -50,12 +51,16 @@ export function courtsRouter(db: Pool, clock: Clock): Router {
 
   router.post('/', requireRole('admin'), async (req, res) => {
     const court = await createCourt(db, createCourtSchema.parse(req.body));
+    realtime.publish({ type: 'courts.changed' });
     res.status(201).json(court);
   });
 
   router.patch('/:id', requireRole('admin'), async (req, res) => {
     const { id } = idParam.parse(req.params);
-    res.json(await updateCourt(db, id, updateCourtSchema.parse(req.body)));
+    const court = await updateCourt(db, id, updateCourtSchema.parse(req.body));
+    // Hours, price or active status may have changed what users can book.
+    realtime.publish({ type: 'courts.changed' });
+    res.json(court);
   });
 
   return router;

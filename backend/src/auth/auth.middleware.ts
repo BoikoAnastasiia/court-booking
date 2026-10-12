@@ -28,6 +28,16 @@ export function signToken(user: AuthUser): string {
   return jwt.sign(payload, config.jwtSecret, { expiresIn: config.jwtExpiresInSeconds });
 }
 
+/** Verifies a JWT and returns its user. Throws 401 if invalid or expired. */
+export function verifyToken(token: string): AuthUser {
+  try {
+    const payload = jwt.verify(token, config.jwtSecret) as TokenPayload;
+    return { id: Number(payload.sub), role: payload.role };
+  } catch {
+    throw new AppError(401, 'UNAUTHENTICATED', 'Invalid or expired token');
+  }
+}
+
 /** Rejects the request with 401 unless it carries a valid Bearer token. */
 export const authenticate: RequestHandler = (req, _res, next) => {
   const header = req.headers.authorization;
@@ -35,12 +45,7 @@ export const authenticate: RequestHandler = (req, _res, next) => {
   if (!token) {
     throw new AppError(401, 'UNAUTHENTICATED', 'Missing bearer token');
   }
-  try {
-    const payload = jwt.verify(token, config.jwtSecret) as TokenPayload;
-    req.user = { id: Number(payload.sub), role: payload.role };
-  } catch {
-    throw new AppError(401, 'UNAUTHENTICATED', 'Invalid or expired token');
-  }
+  req.user = verifyToken(token);
   next();
 };
 

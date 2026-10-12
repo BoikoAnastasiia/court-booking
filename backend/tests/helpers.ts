@@ -6,6 +6,8 @@ import { createApp } from '../src/app';
 import { signToken, type Role } from '../src/auth/auth.middleware';
 import { config } from '../src/config';
 import { createPool } from '../src/db/pool';
+import { RealtimeHub } from '../src/realtime/hub';
+import { attachRealtime } from '../src/realtime/websocket';
 
 export const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://courts:courts@localhost:5433/courts_test';
@@ -22,6 +24,7 @@ export function at(hour: number, minute = 0, second = 0): Date {
 export interface TestContext {
   db: Pool;
   server: Server;
+  hub: RealtimeHub;
   /** Mutable "now" seen by the app. */
   setNow: (d: Date) => void;
   close: () => Promise<void>;
@@ -30,15 +33,19 @@ export interface TestContext {
 export async function setupApp(): Promise<TestContext> {
   const db = createPool(TEST_DATABASE_URL);
   let now = at(10);
-  const app = createApp({ db, clock: () => now });
+  const hub = new RealtimeHub();
+  const app = createApp({ db, clock: () => now, realtime: hub });
   const server = app.listen(0);
+  const realtime = attachRealtime(server, hub);
   return {
     db,
     server,
+    hub,
     setNow: (d) => {
       now = d;
     },
     close: async () => {
+      realtime.close();
       await new Promise((resolve) => server.close(resolve));
       await db.end();
     },

@@ -27,6 +27,7 @@ export function facilityDayBounds(day: DateTime): { start: Date; end: Date } {
   return { start: day.toJSDate(), end: day.plus({ days: 1 }).startOf('day').toJSDate() };
 }
 
-export function todayInFacility(now: Date): string {
-  return DateTime.fromJSDate(now, { zone: config.facilityTimezone }).toISODate()!;
+/** The facility-local calendar date (YYYY-MM-DD) of an instant. */
+export function facilityDateOf(instant: Date): string {
+  return DateTime.fromJSDate(instant, { zone: config.facilityTimezone }).toISODate()!;
 }

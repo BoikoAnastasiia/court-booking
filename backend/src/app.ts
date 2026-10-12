@@ -8,15 +8,18 @@ import { courtsRouter } from './courts/courts.routes';
 import { config } from './config';
 import { AppError, errorHandler } from './errors';
 import { systemClock, type Clock } from './lib/time';
+import { noopPublisher, type Publisher } from './realtime/hub';
 import { usersRouter } from './users/users.routes';
 
 export interface AppDeps {
   db: Pool;
   /** Injected so tests can pin "now" (past-booking and cancellation rules). */
   clock?: Clock;
+  /** Where booking/court change events go (the WebSocket hub in production). */
+  realtime?: Publisher;
 }
 
-export function createApp({ db, clock = systemClock }: AppDeps): Express {
+export function createApp({ db, clock = systemClock, realtime = noopPublisher }: AppDeps): Express {
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -32,8 +35,8 @@ export function createApp({ db, clock = systemClock }: AppDeps): Express {
     });
   });
   app.use('/api/auth', authRouter(db));
-  app.use('/api/courts', courtsRouter(db, clock));
-  app.use('/api/bookings', bookingsRouter(db, clock));
+  app.use('/api/courts', courtsRouter(db, clock, realtime));
+  app.use('/api/bookings', bookingsRouter(db, clock, realtime));
   app.use('/api/admin', adminRouter(db));
   app.use('/api/users', usersRouter(db));
 
