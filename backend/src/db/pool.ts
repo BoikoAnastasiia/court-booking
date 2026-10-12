@@ -6,5 +6,13 @@ import { config } from '../config';
 types.setTypeParser(types.builtins.INT8, (value) => Number(value));
 
 export function createPool(connectionString = config.databaseUrl): Pool {
-  return new Pool({ connectionString });
+  const pool = new Pool({ connectionString });
+  // When Postgres drops an idle connection (restart, network blip) the pool
+  // emits 'error'. Unhandled, that event crashes the Node process. The pool
+  // already discards the broken client and opens a new one on the next query,
+  // so logging is all that's needed.
+  pool.on('error', (err) => {
+    console.error('Idle Postgres connection lost:', err.message);
+  });
+  return pool;
 }

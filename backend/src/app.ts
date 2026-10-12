@@ -24,8 +24,15 @@ export function createApp({ db, clock = systemClock, realtime = noopPublisher }:
   app.use(cors());
   app.use(express.json());
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true });
+  // Readiness check for Docker / load balancers: the process is up AND can
+  // reach the database. 503 tells them not to send traffic here yet.
+  app.get('/api/health', async (_req, res) => {
+    try {
+      await db.query('SELECT 1');
+      res.json({ ok: true, db: 'up' });
+    } catch {
+      res.status(503).json({ ok: false, db: 'down' });
+    }
   });
   // Public settings the frontend needs to render times like the server does.
   app.get('/api/config', (_req, res) => {
