@@ -35,7 +35,7 @@ Postgres starts, the backend applies migrations and seeds demo data, then the fr
 | User  | `bob@example.com`   | `password123` |
 | Admin | `admin@example.com` | `admin123`    |
 
-**Seed contents:** 4 courts (one of them inactive, with booking history) and bookings from 2 days ago to 3 days ahead. Dates are relative to today, so there's always something upcoming and something past to look at.
+**Seed contents:** 11 courts across 6 sports (one of them inactive, with booking history) and bookings from 2 days ago to 3 days ahead. Dates are relative to today, so there's always something upcoming and something past to look at.
 
 ### Useful commands
 
@@ -81,4 +81,4 @@ EXCLUDE USING gist (court_id WITH =, tstzrange(starts_at, ends_at) WITH &&)
 - decide what happens to future bookings when a court's hours shrink or it's deactivated (right now they're kept)
 - test the days when clocks change (daylight saving)
 - add pagination to "My bookings"
-- one of the bonus options; real-time updates (SSE)
+- share real-time updates across several backend instances (Postgres LISTEN/NOTIFY or Redis)
